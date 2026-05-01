@@ -1,0 +1,503 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String            @id @default(uuid())
+  email                String            @unique
+  age                  Int?
+  createdAt            DateTime          @default(now())
+  genderPreference     String?
+  interests            String?
+  isBanned             Boolean           @default(false)
+  isSuspended          Boolean           @default(false)
+  language             String            @default("en")
+  passwordHash         String?
+  pronouns             String?
+  timezone             String            @default("UTC")
+  trustScore           Int               @default(100)
+  updatedAt            DateTime          @default(now()) @updatedAt
+  username             String?
+  voiceComfort         String?
+  lastUsernameChangeAt DateTime?
+  bio                  String?
+  conversationIntent   String?
+  readReceipts         Boolean           @default(true)
+  role                 String            @default("user") @db.VarChar(50)
+  badges               Badge[]
+  blocks2              Block[]           @relation("Blocked")
+  blocks               Block[]           @relation("Blocker")
+  chats                Chat[]            @relation("ChatUser1")
+  chats2               Chat[]            @relation("ChatUser2")
+  matchLikesSent       MatchLike[]       @relation("LikeSender")
+  matchLikesReceived   MatchLike[]       @relation("LikeTarget")
+  matchPassesSent      MatchPass[]       @relation("PassSender")
+  messages             Message[]
+  notificationsActor   Notification[]    @relation("NotificationActor")
+  notifications        Notification[]    @relation("NotificationUser")
+  postComments         PostComment[]
+  postLikes            PostLike[]
+  postShares           PostShare[]       @relation("UserSharedPosts")
+  posts                Post[]
+  profile              Profile?
+  promptAnswers        PromptAnswer[]
+  reports2             Report[]          @relation("Reported")
+  reports              Report[]          @relation("Reporter")
+  rooms                RoomUser[]
+  savedConnections     SavedConnection[] @relation("SavedUser1")
+  savedConnections2    SavedConnection[] @relation("SavedUser2")
+  userFeedback         UserFeedback[]    @relation("FeedbackFrom")
+  userFeedback2        UserFeedback[]    @relation("FeedbackTo")
+   voiceSessions        VoiceSession[]    @relation("VoiceUser1")
+   voiceSessions2       VoiceSession[]    @relation("VoiceUser2")
+   auditLogs            AuditLog[]        @relation("AdminAuditLogs")
+   aiInsights           AIUserInsight?
+   auditSessions        AuditSession[]    @relation("UserAuditSessions")
+   adminSessions        AuditSession[]    @relation("AdminAuditSessions")
+
+   @@map("users")
+ }
+
+model Mood {
+  id          String @id @default(uuid())
+  name        String @unique
+  emoji       String
+  description String
+  category    String
+  color       String
+
+  @@map("moods")
+}
+
+model ConversationIntent {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String
+  icon        String
+  isCasual    Boolean @default(false)
+
+  @@map("conversation_intents")
+}
+
+model Prompt {
+  id         String         @id @default(uuid())
+  category   String
+  difficulty String
+  dailyTheme String?
+  expiresAt  DateTime?
+  isActive   Boolean        @default(true)
+  isDaily    Boolean        @default(false)
+  text       String
+  type       String
+  answers    PromptAnswer[]
+  rooms      Room[]
+
+  @@map("prompts")
+}
+
+model Room {
+  id          String     @id @default(uuid())
+  name        String
+  description String
+  theme       String
+  createdAt   DateTime   @default(now())
+  isVoice     Boolean    @default(false)
+  promptId    String?
+  chats       Chat[]
+  users       RoomUser[]
+  prompt      Prompt?    @relation(fields: [promptId], references: [id])
+
+  @@index([promptId])
+  @@map("rooms")
+}
+
+model Profile {
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  pronouns           String?
+  interests          String?
+  voiceOpen          Boolean   @default(false)
+  updatedAt          DateTime  @default(now()) @updatedAt
+  coverPhotoUrl      String?   @map("cover_photo_url")
+  currentCity        String?   @map("current_city")
+  dateOfBirth        DateTime? @map("date_of_birth")
+  education          String?
+  gender             String?
+  hometown           String?
+  intro              String?
+  profilePhotoUrl    String?   @map("profile_photo_url")
+  relationshipStatus String?   @map("relationship_status")
+  workPlace          String?   @map("work_place")
+  workTitle          String?   @map("work_title")
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model PromptAnswer {
+  id        String   @id @default(uuid())
+  userId    String
+  promptId  String
+  answer    String
+  createdAt DateTime @default(now())
+  prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, promptId])
+  @@index([promptId])
+  @@map("prompt_answers")
+}
+
+model Chat {
+  id               String            @id @default(uuid())
+  status           String            @default("active")
+  archivedAt       DateTime?
+  endedAt          DateTime?
+  roomId           String?
+  startedAt        DateTime          @default(now())
+  user1Id          String
+  user2Id          String
+  room             Room?             @relation(fields: [roomId], references: [id])
+  user1            User              @relation("ChatUser1", fields: [user1Id], references: [id])
+  user2            User              @relation("ChatUser2", fields: [user2Id], references: [id])
+  messages         Message[]
+  reports          Report[]
+  savedConnections SavedConnection[]
+  userFeedback     UserFeedback[]
+  voiceSessions    VoiceSession[]
+
+  @@index([user1Id])
+  @@index([user2Id])
+  @@index([roomId])
+  @@map("chats")
+}
+
+model Message {
+  id                   String    @id @default(uuid())
+  content              String    @db.Text
+  chatId               String
+  createdAt            DateTime  @default(now())
+  moderationStatus     String    @default("approved")
+  senderId             String
+  deliveredAt          DateTime?
+  isDeletedForEveryone Boolean   @default(false)
+  readAt               DateTime?
+  deletedByRecipient   Boolean   @default(false)
+  deletedBySender      Boolean   @default(false)
+  clientId             String?
+  chat                 Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender               User      @relation(fields: [senderId], references: [id])
+
+  @@index([chatId])
+  @@index([senderId])
+  @@index([clientId])
+  @@map("messages")
+}
+
+model VoiceSession {
+  id              String    @id @default(uuid())
+  status          String    @default("requested")
+  chatId          String
+  durationSeconds Int?
+  endedAt         DateTime?
+  startedAt       DateTime?
+  user1Id         String
+  user2Id         String
+  chat            Chat      @relation(fields: [chatId], references: [id])
+  user1           User      @relation("VoiceUser1", fields: [user1Id], references: [id])
+  user2           User      @relation("VoiceUser2", fields: [user2Id], references: [id])
+
+  @@index([user1Id])
+  @@index([user2Id])
+  @@index([chatId])
+  @@map("voice_sessions")
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  description String?
+  status      String   @default("pending")
+  chatId      String?
+  createdAt   DateTime @default(now())
+  reason      String
+  reportedId  String
+  reporterId  String
+  chat        Chat?    @relation(fields: [chatId], references: [id])
+  reported    User     @relation("Reported", fields: [reportedId], references: [id])
+  reporter    User     @relation("Reporter", fields: [reporterId], references: [id])
+
+  @@index([reporterId])
+  @@index([reportedId])
+  @@index([chatId])
+  @@map("reports")
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id])
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id])
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+model Badge {
+  id        String   @id @default(uuid())
+  userId    String
+  badgeType String
+  count     Int      @default(1)
+  awardedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("badges")
+}
+
+model SavedConnection {
+  id      String   @id @default(uuid())
+  label   String?
+  chatId  String?
+  savedAt DateTime @default(now())
+  user1Id String
+  user2Id String
+  chat    Chat?    @relation(fields: [chatId], references: [id])
+  user1   User     @relation("SavedUser1", fields: [user1Id], references: [id])
+  user2   User     @relation("SavedUser2", fields: [user2Id], references: [id])
+
+  @@unique([user1Id, user2Id])
+  @@index([user2Id])
+  @@index([chatId])
+  @@map("saved_connections")
+}
+
+model UserFeedback {
+  id         String   @id @default(uuid())
+  attributes String?
+  chatId     String
+  createdAt  DateTime @default(now())
+  fromUserId String
+  toUserId   String
+  chat       Chat     @relation(fields: [chatId], references: [id])
+  fromUser   User     @relation("FeedbackFrom", fields: [fromUserId], references: [id])
+  toUser     User     @relation("FeedbackTo", fields: [toUserId], references: [id])
+
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([chatId])
+  @@map("user_feedback")
+}
+
+model RoomUser {
+  id       String    @id @default(uuid())
+  roomId   String
+  userId   String
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+  room     Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+  @@map("room_users")
+}
+
+model Post {
+  id            String        @id @default(cuid())
+  userId        String
+  content       String
+  imageUrl      String?
+  isDarkMeme    Boolean       @default(false)
+  likesCount    Int           @default(0)
+  commentsCount Int           @default(0)
+  sharesCount   Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now()) @updatedAt
+  comments      PostComment[]
+  likes         PostLike[]
+  shares        PostShare[]   @relation("SharedOriginalPost")
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("posts")
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("post_likes")
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("post_comments")
+}
+
+model PostShare {
+  id             String   @id @default(cuid())
+  originalPostId String
+  sharedByUserId String
+  createdAt      DateTime @default(now())
+  originalPost   Post     @relation("SharedOriginalPost", fields: [originalPostId], references: [id], onDelete: Cascade)
+  sharedByUser   User     @relation("UserSharedPosts", fields: [sharedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([originalPostId])
+  @@index([sharedByUserId])
+  @@map("post_shares")
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String
+  type       String
+  actorId    String
+  targetId   String?
+  targetType String?
+  read       Boolean  @default(false)
+  data       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  actor      User     @relation("NotificationActor", fields: [actorId], references: [id])
+  user       User     @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@index([actorId], map: "notifications_actorId_fkey")
+  @@map("notifications")
+}
+
+model MatchLike {
+  id        String   @id @default(uuid())
+  senderId  String
+  targetId  String
+  createdAt DateTime @default(now())
+  sender    User     @relation("LikeSender", fields: [senderId], references: [id], onDelete: Cascade)
+  target    User     @relation("LikeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, targetId])
+  @@index([targetId])
+  @@map("match_likes")
+}
+
+model MatchPass {
+  id        String   @id @default(uuid())
+  senderId  String
+  targetId  String
+  createdAt DateTime @default(now())
+  sender    User     @relation("PassSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, targetId])
+  @@index([targetId])
+  @@map("match_passes")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  action       String   // e.g., "USER_BAN", "ROLE_CHANGE", "REPORT_RESOLVE"
+  entityType   String   // e.g., "USER", "REPORT", "VOICE_CALL"
+  entityId     String
+  adminId      String
+  targetUserId String?
+  sessionId    String?
+  metadata     Json?
+  isSensitive  Boolean  @default(false) @map("isSensitive") @db.TinyInt
+  details      String?  @db.Text
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  admin User @relation("AdminAuditLogs", fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([targetUserId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model AIUserInsight {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  userType         String   @map("user_type") @db.VarChar(50)
+  engagementLevel  String   @map("engagement_level") @db.VarChar(20)
+  activityPattern  String   @map("activity_pattern") @db.VarChar(20)
+  riskLevel        RiskLevel @map("risk_level")
+  anomalyDetected  Boolean  @map("anomaly_detected") @db.TinyInt
+  intentSummary    Json     @map("intent_summary")
+  alerts           Json
+  recommendation   Json
+  behaviorSummary  String   @map("behavior_summary") @db.Text
+  aiConfidence     String   @map("ai_confidence") @db.VarChar(20)
+  aiModel          String   @map("ai_model") @db.VarChar(100)
+  aiVersion        String   @map("ai_version") @db.VarChar(50)
+  feedbackNotes    String?  @map("feedback_notes") @db.Text
+  generatedAt      DateTime @default(now()) @map("generatedAt")
+  updatedAt        DateTime @updatedAt @map("updatedAt")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_user_insights")
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model AuditSession {
+  id        String   @id @default(uuid())
+  adminId   String
+  userId    String
+  reason    String   @db.Text
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+
+  admin User @relation("AdminAuditSessions", fields: [adminId], references: [id])
+  user  User @relation("UserAuditSessions", fields: [userId], references: [id])
+
+  @@map("audit_sessions")
+}
+
+model AIInsightHistory {
+  id              String   @id @default(uuid())
+  userId          String
+  insightId       String
+  model           String   @db.VarChar(100)
+  version         String   @db.VarChar(50)
+  rawResponse     Json     @map("raw_response")
+  behaviorSummary String   @map("behavior_summary") @db.Text
+  confidence      String   @db.VarChar(20)
+  createdAt       DateTime @default(now())
+
+  @@map("ai_insight_history")
+}

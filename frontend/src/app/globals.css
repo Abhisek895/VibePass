@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root, .dark {
+    /* Premium Midnight Charcoal Palette */
+    --bg-primary: 18 18 20;    /* #121214 */
+    --bg-secondary: 26 26 29;  /* #1A1A1D */
+    --bg-surface: 34 34 38;    /* #222226 */
+    --bg-elevated: 42 42 48;   /* #2A2A30 */
+
+    /* Vibe Accents */
+    --accent-primary: 139 92 246;   /* #8B5CF6 (Soft Violet) */
+    --accent-secondary: 217 70 239; /* #D946EF (Muted Fuchsia) */
+    --accent-tertiary: 244 63 94;   /* #F43F5E (Gentle Rose) */
+    --voice-active: 59 130 246;     /* #3B82F6 (Calming Blue) */
+
+    /* Feedback */
+    --success: 16 185 129; /* #10B981 */
+    --warning: 245 158 11; /* #F59E0B */
+    --danger: 239 68 68;   /* #EF4444 */
+
+    /* Typography */
+    --text-primary: 248 250 252; /* #F8FAFC */
+    --text-secondary: 148 163 184; /* #94A3B8 */
+    --text-muted: 100 116 139; /* #64748B */
+
+    /* Borders */
+    --border-subtle: 255 255 255; /* Opacity applied in tailwind */
+    --border-strong: 255 255 255;
+  }
+
+  html, body {
+    @apply bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))] antialiased selection:bg-violet-500/30;
+    min-height: 100dvh;
+    width: 100vw;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply bg-[rgb(var(--accent-primary))] text-white font-medium rounded-2xl px-6 py-3 
+           transition-all duration-300 active:scale-[0.98] hover:brightness-110
+           shadow-[0_0_20px_rgba(139,92,246,0.3)] min-h-[48px] flex items-center justify-center;
+  }
+  .btn-secondary {
+    @apply bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] font-medium rounded-2xl px-6 py-3 
+           border border-[rgba(var(--border-strong),0.1)] transition-all duration-300 active:scale-[0.98] 
+           hover:bg-[rgb(var(--bg-elevated))] min-h-[48px] flex items-center justify-center;
+  }
+  .btn-danger {
+    @apply bg-[rgb(var(--danger),0.1)] text-[rgb(var(--danger))] font-medium rounded-2xl px-6 py-3 
+           border border-[rgb(var(--danger),0.2)] transition-all duration-300 active:scale-[0.98] 
+           hover:bg-[rgb(var(--danger))] hover:text-white min-h-[48px] flex items-center justify-center;
+  }
+
+  /* Chat Bubbles */
+  .chat-bubble-self {
+    @apply bg-[rgb(var(--accent-primary))] text-white rounded-[16px_16px_2px_16px] px-4 py-3 max-w-[85%] text-[15px] leading-relaxed;
+  }
+  .chat-bubble-other {
+    @apply bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] rounded-[16px_16px_16px_2px] px-4 py-3 max-w-[85%] text-[15px] leading-relaxed;
+  }
+
+  /* Cards & Elevators */
+  .vibe-card {
+    @apply bg-[rgb(var(--bg-surface))] rounded-[24px] p-6 shadow-[0_8px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)]
+           border border-[rgba(var(--border-subtle),0.05)];
+  }
+  .glass-panel {
+    @apply bg-[rgba(var(--bg-secondary),0.7)] backdrop-blur-md border border-[rgba(var(--border-subtle),0.08)];
+  }
+
+  /* Skeleton Loader Shimmer */
+  .skeleton-shimmer {
+    @apply bg-[rgb(var(--bg-surface))] relative overflow-hidden rounded-xl;
+  }
+  .skeleton-shimmer::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full;
+    background-image: linear-gradient(
+      90deg,
+      rgba(255,255,255, 0) 0,
+      rgba(255,255,255, 0.04) 20%,
+      rgba(255,255,255, 0.08) 60%,
+      rgba(255,255,255, 0)
+    );
+    animation: shimmer 2s infinite;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+   .animate-fadeIn {
+    animation: fadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-sparkle {
+    animation: sparkle 2s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes sparkle {
+    0%, 100% { opacity: 0.5; filter: brightness(1); }
+    50% { opacity: 1; filter: brightness(1.5); }
+  }
+}
+

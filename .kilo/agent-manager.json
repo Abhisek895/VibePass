@@ -1,0 +1,15 @@
+{
+  "worktrees": {
+    "wt-1777030065008-1": {
+      "branch": "flash-relative",
+      "path": "c:\\VibePass\\.kilo\\worktrees\\flash-relative",
+      "parentBranch": "main",
+      "createdAt": "2026-04-24T11:27:45.008Z",
+      "remote": "origin"
+    }
+  },
+  "sessions": {},
+  "worktreeOrder": [
+    "wt-1777030065008-1"
+  ]
+}

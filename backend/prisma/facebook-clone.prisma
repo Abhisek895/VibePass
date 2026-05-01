@@ -1,0 +1,342 @@
+// Facebook Clone Schema - Prisma
+// Generated from SQL schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USERS
+// ============================================
+
+model User {
+  id              BigInt   @id @default(autoincrement())
+  username        String   @unique(map: "uk_users_username") @db.VarChar(50)
+  email           String   @unique(map: "uk_users_email") @db.VarChar(255)
+  passwordHash    String   @map("password_hash") @db.VarChar(255)
+  firstName       String   @map("first_name") @db.VarChar(100)
+  lastName        String?  @map("last_name") @db.VarChar(100)
+  isActive        Boolean  @map("is_active") @default(true) @db.TinyInt
+  accountPrivacy  Privacy  @map("account_privacy") @default(public)
+  createdAt       DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  profile         UserProfile?
+  posts           Post[]
+  sentRequests     FriendRequest[] @relation("FriendRequestSender")
+  receivedRequests FriendRequest[] @relation("FriendRequestReceiver")
+  friendshipsAsOne Friendship[]   @relation("FriendshipUserOne")
+  friendshipsAsTwo Friendship[]   @relation("FriendshipUserTwo")
+  blockedUsers     UserBlock[]     @relation("Blocker")
+  blockedBy       UserBlock[]     @relation("Blocked")
+  reactions        Reaction[]
+  comments        Comment[]
+  commentReactions CommentReaction[]
+  notifications   Notification[] @relation("NotificationUser")
+  actorNotifications Notification[] @relation("NotificationActor")
+
+  @@map("users")
+  @@index([isActive], map: "idx_users_active")
+}
+
+enum Privacy {
+  public
+  friends
+  private
+}
+
+// ============================================
+// USER PROFILES
+// ============================================
+
+model UserProfile {
+  id                BigInt   @id @default(autoincrement())
+  userId            BigInt   @unique(map: "uk_user_profiles_user") @map("user_id")
+  bio               String?  @db.VarChar(500)
+  intro             String?  @db.VarChar(255)
+  profilePhotoUrl   String?  @map("profile_photo_url") @db.VarChar(500)
+  coverPhotoUrl     String?  @map("cover_photo_url") @db.VarChar(500)
+  gender            String?  @db.VarChar(30)
+  dateOfBirth       DateTime? @map("date_of_birth") @db.Date
+  relationshipStatus String? @map("relationship_status") @db.VarChar(50)
+  workTitle         String?  @map("work_title") @db.VarChar(100)
+  workPlace         String?  @map("work_place") @db.VarChar(150)
+  education         String?  @db.VarChar(150)
+  currentCity       String?  @map("current_city") @db.VarChar(100)
+  hometown          String?  @db.VarChar(100)
+  createdAt         DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("user_profiles")
+}
+
+// ============================================
+// USER BLOCKS
+// ============================================
+
+model UserBlock {
+  id              BigInt   @id @default(autoincrement())
+  blockerUserId   BigInt   @map("blocker_user_id")
+  blockedUserId   BigInt   @map("blocked_user_id")
+  createdAt       DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  blocker         User     @relation("Blocker", fields: [blockerUserId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  blocked         User     @relation("Blocked", fields: [blockedUserId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([blockerUserId, blockedUserId], map: "uk_user_blocks_pair")
+  @@index([blockedUserId], map: "idx_user_blocks_blocked")
+  @@map("user_blocks")
+}
+
+// ============================================
+// FRIEND REQUESTS
+// ============================================
+
+model FriendRequest {
+  id            BigInt       @id @default(autoincrement())
+  senderUserId  BigInt       @map("sender_user_id")
+  receiverUserId BigInt      @map("receiver_user_id")
+  status        FriendStatus @default(pending)
+  respondedAt   DateTime?   @map("responded_at") @db.DateTime(0)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.DateTime(0)
+
+  sender        User         @relation("FriendRequestSender", fields: [senderUserId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  receiver      User         @relation("FriendRequestReceiver", fields: [receiverUserId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([senderUserId, receiverUserId], map: "uk_friend_requests_pair")
+  @@index([receiverUserId, status], map: "idx_friend_requests_receiver_status")
+  @@index([senderUserId, status], map: "idx_friend_requests_sender_status")
+  @@map("friend_requests")
+}
+
+enum FriendStatus {
+  pending
+  accepted
+  rejected
+  cancelled
+}
+
+// ============================================
+// FRIENDSHIPS
+// ============================================
+
+model Friendship {
+  id          BigInt   @id @default(autoincrement())
+  userOneId   BigInt   @map("user_one_id")
+  userTwoId   BigInt   @map("user_two_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  userOne     User     @relation("FriendshipUserOne", fields: [userOneId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userTwo     User     @relation("FriendshipUserTwo", fields: [userTwoId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([userOneId, userTwoId], map: "uk_friendships_pair")
+  @@index([userTwoId], map: "idx_friendships_user_two")
+  @@map("friendships")
+}
+
+// ============================================
+// POSTS
+// ============================================
+
+model Post {
+  id             BigInt       @id @default(autoincrement())
+  authorId       BigInt       @map("author_id")
+  postType       PostType     @map("post_type") @default(original)
+  sharedPostId   BigInt?      @map("shared_post_id")
+  content        String?      @db.Text
+  privacy        Privacy      @default(public)
+  feeling        String?      @db.VarChar(100)
+  backgroundColor String?    @map("background_color") @db.VarChar(20)
+  locationName   String?      @map("location_name") @db.VarChar(150)
+  status         PostStatus   @default(active)
+  reactionsCount Int          @map("reactions_count") @default(0) @db.UnsignedInt
+  commentsCount  Int          @map("comments_count") @default(0) @db.UnsignedInt
+  sharesCount    Int          @map("shares_count") @default(0) @db.UnsignedInt
+  createdAt      DateTime     @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.DateTime(0)
+  deletedAt      DateTime?    @map("deleted_at") @db.DateTime(0)
+
+  author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  sharedPost     Post?        @relation("SharedPost", fields: [sharedPostId], references: [id], onDelete: SetNull)
+  shares         Post[]       @relation("SharedPost")
+  media          PostMedia[]
+  reactions      Reaction[]
+  comments       Comment[]
+
+  @@index([authorId, createdAt], map: "idx_posts_author_created")
+  @@index([sharedPostId], map: "idx_posts_shared_post")
+  @@index([privacy, status, createdAt], map: "idx_posts_privacy_status_created")
+  @@map("posts")
+}
+
+enum PostType {
+  original
+  share
+}
+
+enum PostStatus {
+  active
+  deleted
+  hidden
+}
+
+// ============================================
+// POST MEDIA
+// ============================================
+
+model PostMedia {
+  id            BigInt       @id @default(autoincrement())
+  postId        BigInt       @map("post_id")
+  mediaType     MediaType    @map("media_type")
+  mediaUrl      String       @map("media_url") @db.VarChar(500)
+  thumbnailUrl  String?      @map("thumbnail_url") @db.VarChar(500)
+  mimeType      String?      @map("mime_type") @db.VarChar(100)
+  fileSize      BigInt?      @map("file_size")
+  width         Int?         
+  height        Int?         
+  durationSeconds Int?       @map("duration_seconds")
+  sortOrder     Int          @map("sort_order") @default(0) @db.UnsignedSmallInt
+  createdAt     DateTime     @default(now()) @map("created_at") @db.DateTime(0)
+
+  post           Post        @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([postId, sortOrder], map: "idx_post_media_post_sort")
+  @@map("post_media")
+}
+
+enum MediaType {
+  image
+  video
+}
+
+// ============================================
+// REACTIONS
+// ============================================
+
+model Reaction {
+  id           BigInt        @id @default(autoincrement())
+  postId       BigInt        @map("post_id")
+  userId       BigInt        @map("user_id")
+  reactionType ReactionType  @map("reaction_type")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.DateTime(0)
+
+  post         Post          @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([postId, userId], map: "uk_reactions_post_user")
+  @@index([userId], map: "idx_reactions_user")
+  @@index([postId, reactionType], map: "idx_reactions_post_type")
+  @@map("reactions")
+}
+
+enum ReactionType {
+  like
+  love
+  care
+  haha
+  wow
+  sad
+  angry
+}
+
+// ============================================
+// COMMENTS
+// ============================================
+
+model Comment {
+  id            BigInt       @id @default(autoincrement())
+  postId        BigInt       @map("post_id")
+  authorId      BigInt       @map("author_id")
+  parentCommentId BigInt?    @map("parent_comment_id")
+  content       String       @db.Text
+  status        CommentStatus @default(active)
+  repliesCount  Int          @map("replies_count") @default(0) @db.UnsignedInt
+  reactionsCount Int         @map("reactions_count") @default(0) @db.UnsignedInt
+  createdAt     DateTime     @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.DateTime(0)
+  deletedAt     DateTime?    @map("deleted_at") @db.DateTime(0)
+
+  post          Post         @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  author        User         @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  parent        Comment?     @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies       Comment[]    @relation("CommentReplies")
+  reactions     CommentReaction[]
+
+  @@index([postId, createdAt], map: "idx_comments_post_created")
+  @@index([authorId], map: "idx_comments_author")
+  @@index([parentCommentId], map: "idx_comments_parent")
+  @@map("comments")
+}
+
+enum CommentStatus {
+  active
+  deleted
+  hidden
+}
+
+// ============================================
+// COMMENT REACTIONS
+// ============================================
+
+model CommentReaction {
+  id           BigInt        @id @default(autoincrement())
+  commentId    BigInt        @map("comment_id")
+  userId       BigInt        @map("user_id")
+  reactionType ReactionType  @map("reaction_type")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.DateTime(0)
+
+  comment      Comment       @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([commentId, userId], map: "uk_comment_reactions_comment_user")
+  @@index([userId], map: "idx_comment_reactions_user")
+  @@map("comment_reactions")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id          BigInt          @id @default(autoincrement())
+  userId      BigInt          @map("user_id")
+  actorUserId BigInt?         @map("actor_user_id")
+  type        NotificationType @map("type")
+  entityType  EntityType      @map("entity_type")
+  entityId    BigInt          @map("entity_id")
+  isRead      Boolean         @map("is_read") @default(false) @db.TinyInt
+  createdAt   DateTime        @default(now()) @map("created_at") @db.DateTime(0)
+
+  user        User            @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  actor       User?           @relation("NotificationActor", fields: [actorUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([userId, isRead, createdAt], map: "idx_notifications_user_read_created")
+  @@index([actorUserId], map: "idx_notifications_actor")
+  @@map("notifications")
+}
+
+enum NotificationType {
+  friend_request
+  friend_accept
+  post_reaction
+  post_comment
+  comment_reply
+  comment_reaction
+  post_share
+}
+
+enum EntityType {
+  friend_request
+  post
+  comment
+}
