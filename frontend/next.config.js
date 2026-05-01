@@ -1,10 +1,6 @@
-/** @type {import('next').NextConfig} */
-const isGithubActions = process.env.GITHUB_ACTIONS === 'true';
-
 const nextConfig = {
-  // Only use export mode when building on GitHub Actions
-  // Removed output: 'export' to support dynamic routes like /profile/[username]
-  // output: isGithubActions ? 'export' : undefined,
+  // Static export is disabled to support dynamic routes like /profile/[username]
+  // Standard server rendering will be used.
   
   images: {
     unoptimized: true,
